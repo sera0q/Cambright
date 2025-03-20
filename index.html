@@ -1,61 +1,88 @@
 import React, { useState, useEffect } from "react";
 
 const ExamPage = () => {
-  const [timeLeft, setTimeLeft] = useState(1800); // 30 minutes
-  const [warning, setWarning] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(3600); // 60 minutes in seconds
+  const [isExamStarted, setIsExamStarted] = useState(false);
+  const [isSubmitted, setIsSubmitted] = useState(false);
 
   useEffect(() => {
-    const handleKeyDown = (event) => {
-      if (event.key === "PrintScreen" || event.ctrlKey || event.shiftKey) {
-        event.preventDefault();
-        alert("Screenshots and copying are not allowed!");
+    if (isExamStarted && timeLeft > 0) {
+      const timer = setInterval(() => {
+        setTimeLeft((prevTime) => prevTime - 1);
+      }, 1000);
+      return () => clearInterval(timer);
+    } else if (timeLeft === 0) {
+      handleSubmit();
+    }
+  }, [isExamStarted, timeLeft]);
+
+  // Prevent screenshots (Windows, Mac, Mobile)
+  useEffect(() => {
+    const blockScreenshot = (e) => {
+      if (e.key === "PrintScreen" || e.key === "MediaTrackPrevious") {
+        e.preventDefault();
+      }
+      if (e.ctrlKey && (e.key === "c" || e.key === "v" || e.key === "x")) {
+        e.preventDefault();
       }
     };
 
-    const handleContextMenu = (event) => {
-      event.preventDefault();
-    };
-
-    document.addEventListener("keydown", handleKeyDown);
-    document.addEventListener("contextmenu", handleContextMenu);
-
-    return () => {
-      document.removeEventListener("keydown", handleKeyDown);
-      document.removeEventListener("contextmenu", handleContextMenu);
-    };
+    document.addEventListener("keydown", blockScreenshot);
+    return () => document.removeEventListener("keydown", blockScreenshot);
   }, []);
 
+  // Block right-click
   useEffect(() => {
-    const timer = setInterval(() => {
-      setTimeLeft((prevTime) => {
-        if (prevTime <= 1) {
-          clearInterval(timer);
-          alert("Time is up! Your exam has been submitted.");
-          // Auto-submit logic here
-          return 0;
-        }
-        if (prevTime === 600) {
-          setWarning(true);
-        }
-        return prevTime - 1;
-      });
-    }, 1000);
-
-    return () => clearInterval(timer);
+    const disableRightClick = (e) => e.preventDefault();
+    document.addEventListener("contextmenu", disableRightClick);
+    return () => document.removeEventListener("contextmenu", disableRightClick);
   }, []);
+
+  const handleStartExam = () => {
+    setIsExamStarted(true);
+  };
+
+  const handleSubmit = () => {
+    alert("Time is up! Your exam has been submitted.");
+    setIsSubmitted(true);
+  };
+
+  const formatTime = (seconds) => {
+    const minutes = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${minutes}:${secs < 10 ? "0" : ""}${secs}`;
+  };
 
   return (
-    <div className="exam-container">
-      <h1>English Placement Test</h1>
-      <p>
-        Our English Placement Test is designed to assess your current proficiency
-        level and help us recommend the most suitable learning program for you.
-      </p>
-      <div className="timer" style={{ color: warning ? "red" : "green" }}>
-        Time Left: {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, "0")}
-      </div>
-      {warning && <p className="warning">You have 10 minutes remaining! Please go and complete the writing section before time is up because it is really important.</p>}
-      <button className="start-button">Start Exam</button>
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 p-4">
+      {!isExamStarted ? (
+        <div className="bg-white p-6 rounded-lg shadow-lg text-center">
+          <h2 className="text-2xl font-semibold mb-4">Welcome to the English Placement Test</h2>
+          <p className="text-gray-700 mb-6">Our English Placement Test is designed to assess your current proficiency level and help us recommend the most suitable learning program for you.</p>
+          <button
+            onClick={handleStartExam}
+            className="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600"
+          >
+            Start Exam
+          </button>
+        </div>
+      ) : isSubmitted ? (
+        <h2 className="text-2xl font-bold text-red-600">Exam Submitted</h2>
+      ) : (
+        <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-3xl">
+          <div className={`text-lg font-semibold ${timeLeft <= 600 ? "text-red-500" : "text-green-500"}`}>
+            Time Left: {formatTime(timeLeft)}
+          </div>
+          <p className="text-gray-600 mt-4">You have 10 minutes remaining! Please proceed to the writing section before time is up.</p>
+          <textarea className="w-full p-2 border mt-4" rows="5" placeholder="Write your answer here..."></textarea>
+          <button
+            onClick={handleSubmit}
+            className="bg-red-500 text-white px-6 py-2 rounded-lg hover:bg-red-600 mt-4"
+          >
+            Submit Exam
+          </button>
+        </div>
+      )}
     </div>
   );
 };
