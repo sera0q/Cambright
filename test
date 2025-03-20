@@ -1,0 +1,85 @@
+import React, { useState, useEffect } from "react";
+import "tailwindcss/tailwind.css";
+
+export default function SecureExam() {
+    const [examStarted, setExamStarted] = useState(false);
+    const [timeLeft, setTimeLeft] = useState(3000); // 50 minutes
+
+    useEffect(() => {
+        if (examStarted) {
+            const timer = setInterval(() => {
+                setTimeLeft((prevTime) => {
+                    if (prevTime <= 1) {
+                        clearInterval(timer);
+                        autoSubmit();
+                        return 0;
+                    }
+                    return prevTime - 1;
+                });
+            }, 1000);
+
+            return () => clearInterval(timer);
+        }
+    }, [examStarted]);
+
+    useEffect(() => {
+        const blockKeys = (e) => {
+            if (["PrintScreen", "F12", "Escape"].includes(e.key) || (e.ctrlKey && ["c", "u", "v", "x", "s"].includes(e.key))) {
+                e.preventDefault();
+                alert("🚫 Screenshots and copying are not allowed!");
+                document.body.classList.add("blur-sm");
+                setTimeout(() => document.body.classList.remove("blur-sm"), 3000);
+            }
+        };
+
+        const blockContextMenu = (e) => {
+            e.preventDefault();
+        };
+
+        if (examStarted) {
+            document.addEventListener("keydown", blockKeys);
+            document.addEventListener("contextmenu", blockContextMenu);
+        } else {
+            document.removeEventListener("keydown", blockKeys);
+            document.removeEventListener("contextmenu", blockContextMenu);
+        }
+
+        return () => {
+            document.removeEventListener("keydown", blockKeys);
+            document.removeEventListener("contextmenu", blockContextMenu);
+        };
+    }, [examStarted]);
+
+    const autoSubmit = () => {
+        alert("Time is up! Your exam is being submitted automatically.");
+        // Add logic to auto-submit form (if applicable)
+    };
+
+    return (
+        <div className="flex items-center justify-center h-screen bg-gray-100">
+            {!examStarted ? (
+                <div className="text-center bg-white p-8 rounded-lg shadow-lg">
+                    <img src="/Cambright.Lan.png" alt="Exam Banner" className="mx-auto mb-4 w-64" />
+                    <h1 className="text-xl font-bold mb-2">Welcome to the Secure English Placement Test</h1>
+                    <p className="mb-4">Our test assesses your proficiency level and recommends the best learning program for you.</p>
+                    <button
+                        onClick={() => setExamStarted(true)}
+                        className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition"
+                    >
+                        Start Exam
+                    </button>
+                </div>
+            ) : (
+                <div className="w-full max-w-4xl">
+                    <h1 className="text-2xl font-bold text-center text-red-600">Secure Exam</h1>
+                    <p className="text-center text-lg font-semibold mt-2">Time Left: {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, "0")}</p>
+                    <iframe
+                        src="https://docs.google.com/forms/d/e/1FAIpQLSfpBaiBgM_dhm93cIwG9kWKZFSx7E8XM2UxRkb3GOo939GRjA/viewform?usp=header"
+                        className="w-full h-[500px] border-none mt-4"
+                        allowFullScreen
+                    ></iframe>
+                </div>
+            )}
+        </div>
+    );
+}
